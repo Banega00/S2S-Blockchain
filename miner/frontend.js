@@ -129,5 +129,41 @@ class Wallet{
 
         console.log('Keys generated')
     }
+
+    sing(data){
+        const digSign = this.keyPair.sign(calculateHash(concatAndStringify(data)))
+    }
+
+    createTransaction(obj){
+        const {recipient ,amount, chain} = obj;
+
+        if(chain){
+            this.balance = Wallet.calculateBalance({
+                chain,
+                address: this.publicKey
+            })
+
+            if(this.balance < amount){
+                alert('Amount exceeds balance!');
+                throw new Error('Amount exceeds balance');
+            }
+
+            return new Transaction({senderWallet: this, recipient, amount})
+        }
+
+    }
+
+    static calculateBalance(obj){
+
+    }
 }
 
+function calculateHash(data){
+    var hash = crypto.createHash('sha256').update(data).digest('hex').toString();
+
+    return hexToBin(hash);
+}
+
+function concatAndStringify(...inputs){
+    return inputs.map(input => JSON.stringify(input)).sort().join(' ');
+}
