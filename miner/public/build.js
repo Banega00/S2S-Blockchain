@@ -29,5 +29,23 @@ const myPeer = new Peer(undefined, {
     port: '123456'
 })
 
+myPeer.on('open', function(id){
+    console.log('Connected to singaling server')
+
+    const socket = io(SIGNALING_SERVER_URL);
+    PEER_ID = id;
+
+    socket.emit('new-peer', id);
+
+    socket.on('new-peer', function(peerId){
+
+        connectToNewPeer(peerId);
+    })
+
+    socket.on('peer-disconnected', function(peerId){
+        removePeerFromOnlinePeers(peerId)
+    })
+})
+
 
 },{}]},{},[1]);
