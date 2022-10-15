@@ -1,0 +1,10 @@
+npm i body-parser
+npm i cors
+npm i elliptic
+npm i express
+npm i hex-to-binary
+npm i socket.io
+npm i uuid
+
+npm i browserify
+npm i watchify
