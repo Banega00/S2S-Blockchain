@@ -47,5 +47,65 @@ myPeer.on('open', function(id){
     })
 })
 
+function connectToNewPeer(peerId){
+    const connection = myPeer.connect(peerId);
+    
+    connection.on('open', function(){
+        console.log('Connection:', connection.connectionId)
+    })
+
+    //TODO: send message to new peer
+
+    connection.on('data', function(data){
+
+        receiveMessage(peerId, data);
+    })
+
+    connection.on('close', function(){
+
+        removePeerFromOnlinePeers(connection.peer)
+    })
+
+    peers[peerId] = connection;
+}
+
+function sendMessage(peerId, messageObj){
+    var messageStr = JSON.stringify(messageObj);
+    peers[peerId].send(messageStr)
+}
+
+function broadcastMessage(messageObj){
+    for(var peerId in peers){
+        sendMessage(peerId, messageObj);
+    }
+}
+
+function receiveMessage(peerId, messageStr){
+    const messageObj = JSON.parse();
+
+    //TODO define actions for events
+    switch(messageObj.event){
+        case 'sync-request':
+            break;
+        case 'sync-response':
+            break;
+        case 'transaction':
+            break;
+        case 'blockchain':
+            break;
+    }
+}
+
+function removePeerFromOnlinePeers(peerId){
+    console.log('Peer disconnected', peerId)
+
+    if(peers[peerId]){
+        peers[peerId].close();
+        delete peers[peerId];
+    }
+}
+
+//
+
 
 },{}]},{},[1]);
