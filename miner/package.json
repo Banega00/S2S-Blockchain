@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "watchify ./frontend.js -o ./public/build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
