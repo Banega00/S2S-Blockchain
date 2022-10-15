@@ -104,5 +104,30 @@ function removePeerFromOnlinePeers(peerId){
     }
 }
 
-//
+////////////////////////////////////////
+const ec = require('elliptic').ec;
+const ellipticCurve = new ec('secp256k1');
+const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
+var hexToBin = require('hex-to-binary');
+
+class Wallet{
+    balance;
+    keyPair;
+    publicKey;
+
+    constructor(wallet){
+        this.balance = wallet?.balance ?? STARTING_BALANCE;
+
+        if(wallet?.keyPair){
+            this.keyPair = ellipticCurve.keyFromPrivate(wallet.keyPair.priv)
+        }else{
+            this.keyPair = ellipticCurve.genKeyPair();
+        }
+
+        this.publicKey = this.keyPair.getPublic().encode('hex', true);
+
+        console.log('Keys generated')
+    }
+}
 
