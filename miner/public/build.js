@@ -56,6 +56,14 @@ function connectToNewPeer(peerId){
     })
 
     //TODO: send message to new peer
+    sendMessage(connection.peer, 
+        {
+          event: 'sync',
+          data:{
+            blockchain: transactionMiner.blockchain,
+            transactionPool: transactionMiner.transactionPool
+          }  
+        })
 
     connection.on('data', function(data){
 
@@ -87,15 +95,71 @@ function receiveMessage(peerId, messageStr){
     //TODO define actions for events
     switch(messageObj.event){
         case 'sync-request':
+            sendMessage(peerId, 
+                {
+                  event: 'sync-response',
+                  data:{
+                    blockchain: transactionMiner.blockchain,
+                    transactionPool: transactionMiner.transactionPool
+                  }  
+                })
             break;
         case 'sync-response':
+            transactionMiner.blockchain 
+                = new Blockchain(messageObj.data.blockchain)
+            transactionMiner.transactionPool 
+                = new TransactionPool(messageObj.data.transactionPool)
+
+            removeAllBlocksFromPage();
+            clearTransactionPoolOnPage();
+        
+            addBlockchainToPage(transactionMiner.blockchain.chain);
+            addTransactionPoolToPage(transactionMiner.transactionPool)
+            addWalletInfoOnPage(transactionMiner.wallet); 
             break;
         case 'transaction':
+            transactionReceived(messageObj.data)
             break;
         case 'blockchain':
+            blockchainReceived(messageObj.data)
             break;
     }
 }
+
+function transactionReceived(transaction){
+    var newTransaction = new Transaction(transaction);
+    transactionMiner.transactionPool.setTransaction(newTransaction);
+
+    addTransactionToPage(transaction);
+
+    saveBlockchainState();
+}
+
+function blockchainReceived(blockchainData){
+    const chain = blockchainData.chain;
+
+    transactionMiner.blockchain.replaceChain(chain, true, function(){
+
+        transactionMiner.transactionPool.clearBlockchainTransactions({ chain })
+    
+        clearTransactionPoolOnPage();
+
+        //remove all current blocks
+        removeAllBlocksFromPage();
+
+        addBlockchainToPage(chain);
+
+        addWalletInfoOnPage(transactionMiner.wallet);
+
+        saveBlockchainState();
+    })
+}
+
+
+
+
+
+
 
 function removePeerFromOnlinePeers(peerId){
     console.log('Peer disconnected', peerId)
@@ -552,7 +616,303 @@ class TransactionMiner{
 }
 
 class Communication{
+    transactionMiner;
+
+    broadcastChain(){
+        broadcastMessage
+        ({event:'blockchain', data: this.transactionMiner.blockchain});
+    }
+
+    broadcastTransaction(transaction){
+        broadcastMessage({event:'transaction', data: transaction})
+    }
+}
+
+// Wallet elements
+const walletDiv = document.querySelector('.wallet')
+
+const addressDiv = walletDiv.querySelector('.address')
+const balanceDiv = walletDiv.querySelector('.balance')
+
+const amountDiv = document.getElementById('amount')
+const recipientDiv = document.getElementById('recipient')
+
+const submitBtn = document.querySelector('.submitBtn')
+
+submitBtn.addEventListener('click', submitTransaction)
+
+
+// Transaction elements
+const transactionPoolDiv = document.querySelector('.transaction-pool')
+var guessedHashDiv = document.querySelector('.guessed-hash');
+// USER FUNCTIONS
+
+function submitTransaction() {
+  const amount = +amountDiv.value;
+
+  if (isNaN(amount) || amount <= 0) {
+    alert('Amount has to be number greater than 0')
+    return;
+  }
+
+
+  const recipient = recipientDiv.value;
+
+  if(recipient.trim() == transactionMiner.wallet.publicKey){
+    alert(`You cannot send transactions to your own wallet`);
+    return;
+  }
+
+  //check if transaction already exists in transaction pool
+  let transaction = transactionMiner.transactionPool.existingTransaction({inputAddress: wallet.publicKey});
+
+  if(transaction){ //transaction exists in pool
+    transaction = new Transaction({...transaction});
+    transaction.update({ senderWallet: transactionMiner.wallet, recipient, amount })
+  }else{ //transaction doesn't exists in pool
+    transaction = wallet.createTransaction({
+      recipient,
+      amount,
+      chain: transactionMiner.blockchain.chain
+  });
+  }
+
+  transactionMiner.transactionPool.setTransaction(transaction);
+
+  addTransactionToPage(transaction);
+
+  clearTransactionForm();
+
+  communication.broadcastTransaction(transaction);
+
+  saveBlockchainState();
+
+  console.log("TRANSACTION POOL MI JE", transactionMiner.transactionPool)
+  console.log(transactionMiner.transactionPool)
+}
+
+function clearTransactionForm(){
+  amountDiv.value='';
+  recipientDiv.value='';
+}
+
+function addTransactionToPage(transaction){
+  const transactionElement = document.createElement('div');
+  transactionElement.classList.add('transaction')
+
+  transactionElement.setAttribute('transactionid', transaction.id);
+
+  transactionElement.innerHTML = 
+  `
+    <div>
+       <div>
+            <b>${transaction.id}</b> - ${new Date(transaction.input.timestamp).toLocaleString()}
+            </div>
+
+            <div>
+                <b>Sender:</b> ${transaction.input.address}
+            </div>
+
+            <div>
+                Total amount: <b>${Object.entries(transaction.outputMap).reduce((prevValue,[currKey,currValue])=>{
+                  if(currKey == transaction.input.address) return prevValue;
+                  return prevValue+currValue;
+              },0)}</b>
+            </div>
+            <details>
+                <summary>
+                    Transactions
+                </summary>
+                <p>
+                    <hr>
+                    ${Object.keys(transaction.outputMap).filter(key => key != transaction.input.address).map((key,index)=>{
+                      return( 
+                      `
+                      <div class="transfer">
+                        <div>${index+1}</div>
+                        <div class="transfer-address">${ key }</div> 
+                        <div><b>${transaction.outputMap[key]}<b></div> 
+                      </dvi>
+                      `)
+                    }).join('')}
+                </p>
+            </details>
+            <br>
+    </div>
+  `
+
+  const sameTransaction = transactionPoolDiv.querySelector(`.transaction[transactionid="${transaction.id}"]`)
+
+  if(sameTransaction) sameTransaction.remove();
+
+  transactionPoolDiv.appendChild(transactionElement)
+}
+
+function addTransactionPoolToPage(transactionPool){
+  for(const transaction in transactionPool.transactionMap){
+    addTransactionToPage(transactionPool.transactionMap[transaction])
+  }
+}
+
+document.querySelector('.mine-button').addEventListener('click', mineTransactions)
+
+
+function mineTransactions(){
+  if(miningInProgress) return;
+
+  transactionMiner.mineTransactions();
+  transactionMiner.transactionPool.clear();
+
+  clearTransactionPoolOnPage();
+}
+
+function clearTransactionPoolOnPage(){
+  const transactionsDivs = transactionPoolDiv.querySelectorAll('.transaction');
+
+  for(let transactionDiv of transactionsDivs){
+    transactionDiv.remove();
+  }
+
+}
+
+// Blockchain elements
+
+var blockchainLedgerDiv = document.querySelector('.blockchain-ledger');
+
+function addBlockToPage(block, index){
+  const blockDiv = document.createElement('div');
+  blockDiv.classList.add('block');
+
+  blockDiv.innerHTML = `
+    <div>
+      <b>#${index}</b> - ${new Date(block.timestamp).toLocaleString()}
+      <hr>
+      <details>
+        <summary>
+            Current block hash
+        </summary>
+        <p>
+            ${block.hash}
+        </p>
+      </details>
+      <details>
+        <summary>
+            Previous block hash
+        </summary>
+        <p>
+            ${block.previousHash}
+        </p>
+      </details>
+      <hr>
+      <details>
+        <summary>
+            Transactions
+        </summary>
+        <p>
+            ${block.data.map( transaction =>{
+              return (
+                `
+                  <div class="transaction">
+                    <div>
+                       <div>
+                            <b>${transaction.id}</b> - ${new Date(transaction.input.timestamp).toLocaleString()}
+                            </div>
+
+                            <div>
+                              <b>Sender:</b> ${transaction.input.address}
+                            </div>
+
+                            <div>
+                                Total amount: ${Object.entries(transaction.outputMap).reduce((prevValue,[currKey,currValue])=>{
+                                  if(currKey == transaction.input.address) return prevValue;
+                                  return prevValue+currValue;
+                              },0)}
+                            </div>
+                            <details>
+                                <summary>
+                                    Transactions
+                                </summary>
+                                <p>
+                                    <hr>
+                                    ${Object.keys(transaction.outputMap).filter(key => key != transaction.input.address).map((key, index) => {
+                                      return (
+                                        `
+                                      <div class="transfer">
+                                        <div>${index + 1}</div>
+                                        <div class="transfer-address">${key}</div> 
+                                        <div><b>${transaction.outputMap[key]}<b></div> 
+                                      </dvi>
+                                      `)
+                                    }).join('')}
+                                </p>
+                            </details>
+                            <br>
+                    </div>
+                  </div>
+                `
+              )
+            })}
+        </p>
+      </details>       
+      <hr>
+      <div>
+        Nonce: ${ block.nonce }
+      </div>
+      <div>
+        Difficulty: ${ block.difficulty }
+      </div>
+    </div>
+  `
+
+  blockchainLedgerDiv.appendChild(blockDiv)
+}
+
+function transactionReceived(transaction){
+
+  const {id , outputMap, input} = transaction
+  const newTransaction = new Transaction({ id, outputMap, input });
+  transactionMiner.transactionPool.setTransaction(newTransaction);
+
+  addTransactionToPage(transaction);
+
+  saveBlockchainState();
+}
+
+
+function blockchainReceived(blockchainData){
+  const chain = blockchainData.chain;
+  transactionMiner.blockchain.replaceChain(chain, true, function(){
     
+    transactionMiner.transactionPool.clearBlockchainTransactions(
+      { chain: chain }
+    );
+
+    clearTransactionPoolOnPage();
+
+    //remove all current blocks
+    removeAllBlocksFromPage();
+
+    addBlockchainToPage(chain);
+
+    addWalletInfoOnPage(transactionMiner.wallet);
+
+    saveBlockchainState();
+  });
+}
+
+function removeAllBlocksFromPage(){
+  const blocksDivs = blockchainLedgerDiv.querySelectorAll('.block');
+
+  for(const blockDiv of blocksDivs){
+    blockDiv.remove();
+  }
+} 
+
+function addBlockchainToPage(chain) {
+  for (let i = chain.length-1; i >= 0; i--) {
+    addBlockToPage(chain[i], i + 1)
+    
+  }
 }
 },{"console":74,"crypto":80,"elliptic":91,"hex-to-binary":146,"uuid":210}],2:[function(require,module,exports){
 'use strict';

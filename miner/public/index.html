@@ -1,26 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <title>Document</title>
-</head>
-<body>
-    <div class="wallet">
+    
+    <link rel="stylesheet" href="style.css">
 
+    <title>Document</title>
+
+</head>
+
+<body>
+
+    <div class="wallet">
+        <h2>Digital Wallet</h2>
+        <hr>
+        <h3>
+            Address:
+        </h3>
+        <div class="address">
+
+        </div>
+        <br>
+        <h3>
+            Balance:
+        </h2>
+        <div class="balance">
+
+        </div>
+
+        <br>
+
+        <label for="recipient">Recipient address:</label>
+        <input id="recipient" type="text">
+
+        <br>
+
+        <label for="amount">Amount:</label>
+        <input id="amount" type="text">
+
+        <br>
+        <br>
+
+        <button class="submitBtn">Submit Transaction</button>
     </div>
+
+    <hr>
 
     <div class="transaction-pool">
+        <h2>
+            Transaction Pool
+            <button class="mine-button"> MINE </button>
+        </h2>
+        <hr>
 
+        <div class="mining-process"></div>
+        <br>
     </div>
+
+    <hr>
 
     <div class="blockchain-ledger">
-
+        <h2>
+            Blockchain ledger
+        </h2>
+        <hr>
     </div>
 
-    <script src="build.js"> </script>
+
+    <script src="bundle.js"></script>
 </body>
+
 </html>

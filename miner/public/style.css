@@ -1,0 +1,72 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing: border-box;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.1rem;
+}
+
+body{
+    display: flex;
+}
+
+body div{
+    flex: 1;
+    padding: 5px;
+    max-width: 33vw;
+}
+
+body > hr{
+    border: none;
+    width: 3px;
+    background: black;
+    height: 98vh;
+}
+
+.block{
+    border: 1px solid black;
+    margin: 15px 5px;
+}
+
+.address{
+    word-wrap: break-word;
+}
+
+button{
+    padding:0 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover{
+    scale: 1.1;
+    color: rgb(12, 101, 164);
+}
+
+.transaction{
+    border: 1px solid black;
+    word-wrap: break-word;
+    margin-bottom: 5px;
+}
+
+div.transfer{
+    font-size: 0.6rem;
+    display: flex;
+    width: 100%;
+    word-wrap: break-word;
+}
+
+div.transfer .transfer-address{
+    max-width: 80%;
+}
+
+h2{
+    font-size: 1.25em;
+    color: rgb(12, 101, 164);
+}
+
+h3{
+    color: rgb(12, 101, 164);
+}
