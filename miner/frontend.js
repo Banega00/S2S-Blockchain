@@ -18,15 +18,16 @@ var miningInProgres = false;
 var PEER_ID;
 
 
-let SIGNALING_SERVER_URL = 'http://10.1.5.106:3000'
+let SIGNALING_SERVER_URL = 'http://192.168.82.203:3000'
 let isSynchronized = false;
 
 var peers = {}
 
 const myPeer = new Peer(undefined, {
-    host: '10.1.5.106',
+    host: '192.168.82.203',
     port: '12345'
 })
+
 
 myPeer.on('open', function(id){
     console.log('Connected to singaling server')
@@ -457,4 +458,98 @@ class Blockchain{
 
         return true;
     }
+}
+
+
+class TransactionPool {
+    transactionMap;
+
+    constructor(transactionMap) {
+        if (transactionMap) {
+            Object.entries(transactionMap).forEach(([key, value]) => {
+                transactionMap[key] = new Transaction({ ...value });
+            })
+
+        }
+
+        this.transactionMap = transactionMap ?? {}
+
+    }
+
+    clear() {
+        this.transactionMap = {};
+    }
+
+    setTransaction(transaction) {
+        this.transactionMap[transaction.id] = transaction;
+    }
+
+    setMap(transactionMap) {
+        this.transactionMap = transactionMap;
+    }
+
+    existingTransaction({ inputAddress }) {
+        const transactions = Object.values(this.transactionMap);
+
+        return transactions.find(transaction => transaction.input.address === inputAddress);
+    }
+
+    validTransactions() {
+        return Object.values(this.transactionMap).filter(
+            transaction => Transaction.validTransaction(transaction)
+        );
+    }
+
+    clearBlockchainTransactions({ chain }) {
+        for (let i = 1; i < chain.length; i++) {
+            const block = chain[i];
+
+            for (let transaction of block.data) {
+                if (this.transactionMap[transaction.id]) {
+                    delete this.transactionMap[transaction.id];
+                }
+            }
+        }
+    }
+}
+
+class TransactionMiner{
+  blockchain;
+  transactionPool;
+  wallet;
+  communication;
+
+  constructor(object) {
+    const {blockchain, transactionPool, wallet, communication } = object;
+    this.communication = communication;
+    this.blockchain = blockchain;
+    this.transactionPool = transactionPool;
+    this.wallet = wallet;
+  }
+
+  mineTransactions() {
+    const validTransactions = this.transactionPool.validTransactions();
+
+    if(!validTransactions || validTransactions.length <= 0){
+      throw new Error('No transaction in transaction pool')
+    }
+
+    validTransactions.push(
+      Transaction.rewardTransaction({ minerWallet: this.wallet })
+    );
+
+    this.blockchain.addBlock({ data: validTransactions });
+
+    this.communication.broadcastChain();
+
+    this.transactionPool.clear();
+
+    saveBlockchainState();
+
+    addWalletInfoOnPage(this.wallet)
+  }
+}
+
+class Communication{
+    
 }
