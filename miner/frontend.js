@@ -18,14 +18,14 @@ var miningInProgres = false;
 var PEER_ID;
 
 
-let SIGNALING_SERVER_URL = 'http://10.1.5.106:3000'
+let SIGNALING_SERVER_URL = 'http://192.168.1.10:3000'
 let isSynchronized = false;
 
 var peers = {}
 
 const myPeer = new Peer(undefined, {
-    host: '10.1.5.106',
-    port: '123456'
+    host: '192.168.1.10',
+    port: '12345'
 })
 
 myPeer.on('open', function(id){
@@ -80,7 +80,7 @@ function broadcastMessage(messageObj){
 }
 
 function receiveMessage(peerId, messageStr){
-    const messageObj = JSON.parse();
+    const messageObj = JSON.parse(messageStr);
 
     //TODO define actions for events
     switch(messageObj.event){
@@ -131,7 +131,8 @@ class Wallet{
     }
 
     sing(data){
-        const digSign = this.keyPair.sign(calculateHash(concatAndStringify(data)))
+        const digSign = this.keyPair.sign(calculateHash(concatAndStringify(data)));
+        return digSign;
     }
 
     createTransaction(obj){
@@ -143,18 +144,19 @@ class Wallet{
                 address: this.publicKey
             })
 
-            if(this.balance < amount){
-                alert('Amount exceeds balance!');
-                throw new Error('Amount exceeds balance');
-            }
-
-            return new Transaction({senderWallet: this, recipient, amount})
         }
+
+        if(this.balance < amount){
+            alert('Amount exceeds balance!');
+            throw new Error('Amount exceeds balance');
+        }
+
+        return new Transaction({senderWallet: this, recipient, amount})
 
     }
 
     static calculateBalance(obj){
-
+        //TODO
     }
 }
 
