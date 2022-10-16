@@ -19,13 +19,13 @@ var miningInProgres = false;
 var PEER_ID;
 
 
-let SIGNALING_SERVER_URL = 'http://192.168.1.10:3000'
+let SIGNALING_SERVER_URL = 'http://10.1.5.106:3000'
 let isSynchronized = false;
 
 var peers = {}
 
 const myPeer = new Peer(undefined, {
-    host: '192.168.1.10',
+    host: '10.1.5.106',
     port: '12345'
 })
 
@@ -156,9 +156,36 @@ class Wallet{
 
     }
 
-    static calculateBalance(obj){
-        //TODO
-    }
+    static calculateBalance(obj) {
+        const { chain, address } = obj;
+    
+        let hasConductedTransaction = false;
+        let outputsTotal = 0;
+    
+        for (let i=chain.length-1; i>=0; i--) {
+          const block = chain[i];
+    
+          for (let transaction of block.data) {
+    
+            //is this address sender of the transaction
+            if (transaction.input.address === address) {
+              hasConductedTransaction = true;
+            }
+    
+            const addressOutput = transaction.outputMap[address];
+    
+            if (addressOutput) {
+              outputsTotal = outputsTotal + addressOutput;
+            }
+          }
+    
+          if (hasConductedTransaction) {
+            break;
+          }
+        }
+    
+        return hasConductedTransaction ? outputsTotal : STARTING_BALANCE + outputsTotal;
+      }
 }
 
 function calculateHash(data){
@@ -169,6 +196,13 @@ function calculateHash(data){
 
 function concatAndStringify(...inputs){
     return inputs.map(input => JSON.stringify(input)).sort().join(' ');
+}
+
+function verifySignature({publicKey, data, signature}){
+    const keyFromPublic = ellipticCurve.keyFromPublic(publicKey, 'hex');
+
+    return keyFromPublic.verify(calculateHash(concatAndStringify(data)), signature)
+
 }
 
 },{"crypto":72,"elliptic":83,"hex-to-binary":129,"uuid":185}],2:[function(require,module,exports){
