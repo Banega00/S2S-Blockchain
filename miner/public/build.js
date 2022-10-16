@@ -205,6 +205,8 @@ function verifySignature({publicKey, data, signature}){
 
 }
 
+
+
 },{"crypto":72,"elliptic":83,"hex-to-binary":129,"uuid":185}],2:[function(require,module,exports){
 'use strict';
 

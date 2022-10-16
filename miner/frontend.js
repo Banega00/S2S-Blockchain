@@ -203,3 +203,5 @@ function verifySignature({publicKey, data, signature}){
     return keyFromPublic.verify(calculateHash(concatAndStringify(data)), signature)
 
 }
+
+
