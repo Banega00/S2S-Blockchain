@@ -110,6 +110,7 @@ const ellipticCurve = new ec('secp256k1');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 var hexToBin = require('hex-to-binary');
+const { time } = require('console');
 
 class Wallet{
     balance;
@@ -202,6 +203,64 @@ function verifySignature({publicKey, data, signature}){
 
     return keyFromPublic.verify(calculateHash(concatAndStringify(data)), signature)
 
+}
+
+
+class Block{
+    timestamp;
+    previousHash;
+    hash;
+    data;
+    nonce;
+    difficulty;
+
+    constructor(obj){
+        this.timestamp = obj.timestamp;
+        this.previousHash = obj.previousHash;
+        this.hash = obj.hash;
+        this.data = obj.data;
+        this.nonce = obj.nonce;
+        this.difficulty = obj.difficulty;
+    }
+
+    static genesis(){
+        return new Block(GENESIS_DATA)
+    }
+
+    static mineBlock({ lastBlock, data}){
+        
+        const previousHash = lastBlock.hash;
+        var hash, timestamp;
+        var difficulty = lastBlock.difficulty;
+        var nonce = 0;
+
+        miningInProgres = true;
+
+        do{
+            nonce++;
+            timestamp = Date.now();
+
+            difficulty = Block.adjustDifficulty({lastBlock, timestamp})
+
+            hash = calculateHash(concatAndStringify(timestamp, previousHash, data, nonce, difficulty))
+        
+            console.log(hash);
+        }while(hash.substring(0,difficulty) !== '0'.repeat(difficulty));
+        
+        miningInProgres = false;
+
+        return new Block({timestamp, previousHash, data, difficulty, nonce, hash})
+    }
+
+    static adjustDifficulty({originalBlock, timestamp}){
+        const difficulty = originalBlock.difficulty;
+
+        if(difficulty <= 1) return 1;
+        
+        if((timestamp - originalBlock.timestamp) > MINE_RATE) return difficulty-1;
+
+        return difficulty+1;
+    }
 }
 
 
